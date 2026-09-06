@@ -1,0 +1,42 @@
+Architecture of loading Product data
+
+        GET /products/1
+                │
+                ▼
+        get_product_service()
+                │
+                ├───────────────┐
+                ▼               ▼
+            get_db()      get_redis_service()
+                │               │
+                ▼               ▼
+         AsyncSession      RedisService
+                │               │
+                └───────┬───────┘
+                        ▼
+                 ProductService
+                        │
+                ┌───────┴────────┐
+                ▼                ▼
+         ProductDbInterface   RedisService
+                │                │
+                ▼                ▼
+              SQLite            Redis
+
+Architecture of saving Product Data
+
+                        Router (products_router)
+                           │
+                           ▼
+                 create_product service
+                    /             \
+                   /               \
+                  ▼                 ▼
+              get_db()         get_redis()
+                 │                  │
+                 ▼                  ▼
+            AsyncSession          RedisService
+                 │                  │
+                 └────────┬─────────┘
+                          ▼
+                   ProductService

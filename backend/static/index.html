@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>FastAPI Store</title>
+    <link rel="stylesheet" href="/frontend/styles.css">
+</head>
+<body>
+
+<header>🛒 Store Dashboard</header>
+
+<div class="tabs">
+    <div class="tab" onclick="switchTab('users')">👤 Users1</div>
+    <div class="tab" onclick="switchTab('products')">📦 Products</div>
+    <div class="tab active" onclick="switchTab('purchases')">🧾 Purchases</div>
+</div>
+
+<div class="content">
+
+    <!-- USERS -->
+    <div class="section active" id="users">
+        <h2>Users</h2>
+        <div class="form-row">
+            <input id="userName" placeholder="Name"/>
+            <input id="userEmail" placeholder="Email"/>
+            <button onclick="createUser()">+ Add User</button>
+            <button class="secondary" onclick="loadUsers()">↻ Refresh</button>
+        </div>
+        <div class="status" id="userStatus"></div>
+        <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th></tr></thead>
+
+            <tbody id="usersTable"></tbody>
+        </table>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="section" id="products">
+        <h2>Products</h2>
+        <div class="form-row">
+            <input id="productName" placeholder="Product name"/>
+            <input id="productStock" placeholder="Stock" type="number"/>
+            <input id="productPrice" placeholder="Price" type="number" step="0.01"/>
+            <button onclick="createProduct()">+ Add Product</button>
+            <button class="secondary" onclick="loadProducts()">↻ Refresh</button>
+        </div>
+        <div class="status" id="productStatus"></div>
+        <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Stock</th><th>Price</th></tr></thead>
+            <tbody id="productsTable"></tbody>
+        </table>
+    </div>
+
+    <!-- PURCHASES -->
+    <div class="section" id="purchases">
+        <h2>Purchases</h2>
+        <div class="form-row">
+            <input id="buyUserId" placeholder="User ID" type="number"/>
+            <input id="buyProductId" placeholder="Product ID" type="number"/>
+            <input id="buyAmount" placeholder="Amount" type="number" value="1"/>
+            <button onclick="createPurchase()">+ Buy</button>
+            <button class="secondary" onclick="loadPurchases()">↻ Refresh</button>
+        </div>
+        <div class="status" id="purchaseStatus"></div>
+        <table>
+            <thead><tr><th>ID</th><th>User ID</th><th>Product ID</th><th>Amount</th><th>Date</th></tr></thead>
+            <tbody id="purchasesTable"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    const API = 'http://127.0.0.1:8000';
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach((t, i) => {
+            t.classList.toggle('active', ['users','products','purchases'][i] === name);
+        });
+        document.querySelectorAll('.section').forEach(s => {
+            s.classList.toggle('active', s.id === name);
+        });
+        if (name === 'users') loadUsers();
+        if (name === 'products') loadProducts();
+        if (name === 'purchases') loadPurchases();
+    }
+
+    function setStatus(id, msg, isError = false) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = 'status' + (isError ? ' error' : '');
+    }
+
+    // --- USERS ---
+    // async function loadUsers() {
+    //     const res = await fetch(`${API}/get_users/`);
+    //     const users = await res.json();
+    //     document.getElementById('usersTable').innerHTML = users.map(u =>
+    //         `<tr><td><span class="badge">${u.id}</span></td><td>${u.name}</td><td>${u.email}</td></tr>`
+    //     ).join('') || '<tr><td colspan="3">No users yet</td></tr>';
+    // }
+
+    async function loadUsers() {
+        const table = document.getElementById("usersTable");
+        const status = document.getElementById("userStatus");
+
+        try {
+            status.textContent = "Loading...";
+
+            const response = await fetch("/users/");
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const users = await response.json();
+
+            table.innerHTML = "";
+
+            users.forEach(user => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                <td>${user.id}</td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+            `;
+
+                table.appendChild(row);
+            });
+
+            status.textContent = `Loaded ${users.length} users`;
+
+        } catch (error) {
+            console.error(error);
+            status.textContent = "Failed to load users";
+        }
+    }
+
+    async function createUser() {
+        const name = document.getElementById('userName').value.trim();
+        const email = document.getElementById('userEmail').value.trim();
+        if (!name || !email) return setStatus('userStatus', 'Please fill in all fields.', true);
+
+        const res = await fetch(`${API}/users/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email
+            })
+        });
+        if (res.ok) {
+            setStatus('userStatus', '✅ User created!');
+            document.getElementById('userName').value = '';
+            document.getElementById('userEmail').value = '';
+            await loadUsers();
+        } else {
+            setStatus('userStatus', '❌ Failed to create user.', true);
+        }
+    }
+
+    // --- PRODUCTS ---
+    async function loadProducts() {
+        const table = document.getElementById("productsTable")
+        const status = document.getElementById("productStatus")
+        try {
+            status.textContent = "Loading ...";
+
+            const response = await fetch("/products/");
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const products = await response.json(); // collection of products
+
+            console.log("PRODUCTS:", products);
+            console.log("IS ARRAY:", Array.isArray(products));
+            console.log("LENGTH:", products.length);
+
+            table.innerHTML = "";
+
+            products.forEach(product => {
+                const row = document.createElement("tr");
+
+                row.innerHTML= `
+                    <td>${product.name}</td>
+                    <td>${product.price}</td>
+                    <td>${product.stock}</td>
+                `;
+                table.appendChild(row)
+            });
+            status.textContent = `Loaded ${products.length} products`;
+
+        }
+        catch (error) {
+            console.error(error);
+            status.textContent = "Failed to load products";
+        }
+    }
+
+    async function createProduct() {
+        const name = document.getElementById('productName').value.trim();
+        const price = document.getElementById('productPrice').value.trim();
+        const stock = document.getElementById('productStock').value.trim();
+        if (!name || !price || !stock) return setStatus('productStatus', 'Please fill in all fields.', true);
+
+        const res = await fetch(`${API}/products/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                price: price,
+                stock: stock
+            })
+        });
+        if (res.ok) {
+            setStatus('productStatus', '✅ Product created!');
+            document.getElementById('productName').value = '';
+            document.getElementById('productPrice').value = '';
+            document.getElementById('productStock').value = '';
+            await loadProducts();
+        } else {
+            setStatus('productStatus', '❌ Failed to create product.', true);
+        }
+    }
+
+    // --- PURCHASES ---
+    async function loadPurchases() {
+        const res = await fetch(`${API}/get_purchases/`);
+        const purchases = await res.json();
+        document.getElementById('purchasesTable').innerHTML = purchases.map(p =>
+            `<tr>
+                <td><span class="badge">${p.id}</span></td>
+                <td>${p.user_id}</td>
+                <td>${p.product_id}</td>
+                <td>${p.amount}</td>
+                <td>${p.created_at ? new Date(p.created_at).toLocaleString() : '—'}</td>
+            </tr>`
+        ).join('') || '<tr><td colspan="5">No purchases yet</td></tr>';
+    }
+
+    async function createPurchase() {
+        const user_id = document.getElementById('buyUserId').value;
+        const product_id = document.getElementById('buyProductId').value;
+        const amount = document.getElementById('buyAmount').value;
+        if (!user_id || !product_id) return setStatus('purchaseStatus', 'Please fill in User ID and Product ID.', true);
+
+        const res = await fetch(`${API}/buy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: +user_id, product_id: +product_id, amount: +amount })
+        });
+        if (res.ok) {
+            setStatus('purchaseStatus', '✅ Purchase recorded!');
+            await loadPurchases();
+        } else {
+            setStatus('purchaseStatus', '❌ Failed to record purchase.', true);
+        }
+    }
+
+    // Initial load
+    loadUsers();
+</script>
+</body>
+</html>

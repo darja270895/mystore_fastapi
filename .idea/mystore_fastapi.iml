@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/backend/.fastapienv/Include" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/.fastapienv/Lib" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/.fastapienv/Scripts" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/.newenv/Include" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/.newenv/Lib" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/.newenv/Scripts" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

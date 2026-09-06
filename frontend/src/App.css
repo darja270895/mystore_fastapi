@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/* =========================
+   GLOBAL
+   ========================= */
+
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+  sans-serif;
+
+  color: #e5edf3;
+  background: #243746;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+
+/* =========================
+   APP
+   ========================= */
+
+.app {
+  min-height: 100vh;
+  padding: 32px 48px 60px;
+
+  background:
+          linear-gradient(
+                  rgba(30, 52, 66, 0.72),
+                  rgba(30, 52, 66, 0.82)
+          ),
+          url("./assets/background_img.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+
+/* =========================
+   HEADER
+   ========================= */
+
+.dashboard-title {
+  margin: 0 0 40px;
+
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -1px;
+
+  color: #f1f5f8;
+}
+
+
+/* =========================
+   SECTIONS
+   ========================= */
+
+.dashboard-section {
+  margin-bottom: 40px;
+  padding: 28px;
+
+  background: rgba(31, 52, 65, 0.82);
+
+  border: 1px solid rgba(210, 225, 235, 0.18);
+  border-radius: 14px;
+
+  box-shadow:
+          0 8px 30px rgba(0, 0, 0, 0.18);
+
+  backdrop-filter: blur(8px);
+}
+
+.dashboard-section h2 {
+  margin: 0 0 20px;
+
+  color: #eef4f7;
+
+  font-size: 26px;
+  font-weight: 600;
+}
+
+
+/* =========================
+   FORM
+   ========================= */
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  margin-bottom: 20px;
+}
+
+.form-row input {
+  min-width: 160px;
+
+  padding: 10px 14px;
+
+  color: #edf4f7;
+  background: rgba(10, 27, 38, 0.65);
+
+  border: 1px solid rgba(190, 210, 220, 0.25);
+  border-radius: 7px;
+
+  outline: none;
+
+  font-size: 15px;
+
+  transition:
+          border-color 0.2s,
+          background 0.2s;
+}
+
+.form-row input::placeholder {
+  color: #9cafbb;
+}
+
+.form-row input:focus {
+  border-color: #8eb6ca;
+  background: rgba(10, 27, 38, 0.85);
+}
+
+
+/* =========================
+   BUTTONS
+   ========================= */
+
+button {
+  position: absolute;
+  right: 30px;           /* Snaps the button exactly to the left border */
+  padding: 10px 16px;
+
+  color: #edf5f8;
+  background: #527f95;
+
+  border: 1px solid #6f9bae;
+  border-radius: 7px;
+
+  cursor: pointer;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  transition:
+          background 0.2s,
+          transform 0.1s;
+}
+
+button:hover {
+  background: #6493aa;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button.secondary {
+  background: rgba(73, 102, 116, 0.75);
+  border-color: rgba(180, 205, 215, 0.25);
+}
+
+button.secondary:hover {
+  background: rgba(94, 128, 143, 0.9);
+}
+
+
+/* =========================
+   TABLE
+   ========================= */
+
+table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  color: #dce8ee;
+
+  background: rgba(17, 35, 47, 0.45);
+
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+thead {
+  background: rgba(87, 119, 133, 0.45);
+}
+
+th {
+  padding: 13px 16px;
+
+  color: #f0f5f7;
+
+  font-weight: 600;
+  text-align: left;
+
+  border-bottom: 1px solid rgba(200, 220, 230, 0.18);
+}
+
+td {
+  padding: 12px 16px;
+
+  color: #d5e1e7;
+
+  border-bottom: 1px solid rgba(200, 220, 230, 0.1);
+}
+
+tbody tr:hover {
+  background: rgba(130, 165, 180, 0.12);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 768px) {
+
+  .app {
+    padding: 24px 16px 40px;
+  }
+
+  .dashboard-title {
+    font-size: 36px;
+  }
+
+  .dashboard-section {
+    padding: 20px;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row input,
+  .form-row button {
+    width: 100%;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  th,
+  td {
+    padding: 9px 10px;
+  }
+}

@@ -1,0 +1,31 @@
+***Fullstack Flow:
+
+        React //UI
+          +
+        TypeScript
+          +
+        Vite // Dev сборка frontend
+          +
+        FastAPI //Backend API
+
+        ***Next.js
+
+
+***Frontend chain:
+
+        npm run dev
+             ↓
+           Vite
+             ↓
+        index.html
+             ↓
+        main.tsx
+             ↓
+        App.tsx
+             ↓
+        React components
+
+Для запуска фронта:
+cd frontend
+npm install
+npm run dev
