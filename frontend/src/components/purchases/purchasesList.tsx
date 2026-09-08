@@ -1,4 +1,4 @@
-import PurchasesListItem from './purchases-list-item'
+import PurchasesListItem from './PurchasesListItem'
 // import {mockPurchases} from "./purchases.mock..ts";
 
 const PurchaseList = ({data}) => {
