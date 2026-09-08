@@ -258,3 +258,9 @@ tbody tr:last-child td {
     padding: 9px 10px;
   }
 }
+
+@layer components {
+  .bio-card-top-right {
+    @apply fixed top-4 right-4 z-50 max-w-xs rounded-xl border border-gray-100 bg-white p-2 shadow-md;
+  }
+}

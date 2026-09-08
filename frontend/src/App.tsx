@@ -4,45 +4,26 @@ import AppMain from './components/app-main/AppMain'
 
 const API = "http://127.0.0.1:8000"
 
+function WhoAmI({name, link}) {
+    return (
+        <div className="bio-card-top-right">
+            <h3 className="text-sm font-semibold text-gray-900">made by {name.firstname} {name.surname}</h3>
+            <a className="text-xs text-gray-500" href={link}>My linkedIn</a>
+        </div>
+    )
+}
+
 // Component. That's a JS function that returns markup.
 function App() {
 
-    // JSX syntaxis
-    // Wrap with <div></div> or <> </>
-
-    async function loadPurchases() {
-        const response = await fetch(`${API}/get_purchases/`);
-        if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
-        }
-        const purchases = await response.json();
-        const table = document.getElementById("purchasesTable");
-        if (!table) return;
-        table.innerHTML = "";
-        purchases.forEach((purchase: any) => {
-            const row = document.createElement("tr");
-            row.innerHTML = ` 
-             <td>${purchase.id}</td> 
-             <td>${purchase.user_id}</td> 
-             <td>${purchase.product_id}</td> 
-             <td>${purchase.amount}</td> 
-             <td> ${purchase.created_at ? new Date(purchase.created_at).toLocaleString() : "—"} </td> `;
-            table.appendChild(row);
-        });
-    }
-
-    useEffect(() => {
-        // loadUsers();
-        // loadProducts();
-        loadPurchases();
-    }, []);
     return (
+        // JSX syntaxis
+        // Wrap with <div></div> or <> </>
         <div>
+            <WhoAmI name={{firstname: 'Daria', surname: 'Harashchenia'}}
+                    link="https://www.linkedin.com/in/daria-harashchenia-949081107/"/>
             <AppMain/>
-
-
-
-         </div>
+        </div>
     );
 }
 
