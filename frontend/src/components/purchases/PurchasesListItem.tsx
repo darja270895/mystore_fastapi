@@ -1,4 +1,6 @@
-const PurchasesListItem = ({id, user_id, product_id, amount, date_value}) => {
+import type {Purchase} from './purchases.types'
+
+const PurchasesListItem = ({id, user_id, product_id, amount, date_value}: Purchase) => {
     return (
         <tr key={id}>
             <td>{id}</td>

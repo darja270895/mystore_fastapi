@@ -1,7 +1,8 @@
 import PurchasesListItem from './PurchasesListItem'
+import type {Purchase} from "./purchases.types";
 // import {mockPurchases} from "./purchases.mock..ts";
 
-const PurchaseList = ({data}) => {
+const PurchaseList = ({data}:{data: Purchase[]}) => {
 
     //array
     const elements = data.map(item => {

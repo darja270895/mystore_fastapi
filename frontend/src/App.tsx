@@ -1,10 +1,13 @@
-import {useEffect} from "react";
 import './App.css'
 import AppMain from './components/app-main/AppMain'
 
-const API = "http://127.0.0.1:8000"
+// const API = "http://127.0.0.1:8000"
 
-function WhoAmI({name, link}) {
+function WhoAmI({name, link}:
+                {
+                    name: { firstname: string, surname: string };
+                    link: string;
+                }) {
     return (
         <div className="bio-card-top-right">
             <h3 className="text-sm font-semibold text-gray-900">made by {name.firstname} {name.surname}</h3>
