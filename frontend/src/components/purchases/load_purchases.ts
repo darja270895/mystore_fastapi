@@ -1,4 +1,4 @@
-import {mockPurchases} from "./purchases.mock..ts";
+import {mockPurchases} from "./purchases.mock";
 
 // const API = "http://127.0.0.1:8000"
 
