@@ -26,8 +26,8 @@ class ProductService:
 
         product_response = ProductResponse.model_validate(product_obj)
         serialized_product_obj = product_response.model_dump()
-
-        await self._cache.set_value(key=f"product_{product_obj.id}", value=serialized_product_obj, ex=3600)
+        if self._cache:
+            await self._cache.set_value(key=f"product_{product_obj.id}", value=serialized_product_obj, ex=3600)
 
         return product_obj
 
@@ -43,9 +43,10 @@ class ProductService:
     async def get_by_id(self, product_id: int):
 
         #search in Redis firstly
-        cached_obj = await self._cache.get_value(key=f"product_{product_id}")
-        if cached_obj is not None:
-            return cached_obj
+        if self._cache:
+            cached_obj = await self._cache.get_value(key=f"product_{product_id}")
+            if cached_obj is not None:
+                return cached_obj
 
         # select from DB
         product_obj = await self.db_interface.get_by_id(product_id=product_id)
@@ -56,7 +57,8 @@ class ProductService:
             )
 
         product_response  = ProductResponse.model_validate(product_obj)
-        await self._cache.set_value(key=f"product_{product_id}", value=product_response.model_dump(), ex=3600)
+        if self._cache:
+            await self._cache.set_value(key=f"product_{product_id}", value=product_response.model_dump(), ex=3600)
 
         return product_obj
 

@@ -22,7 +22,7 @@ router = APIRouter(
 
 def get_product_service(
         db: AsyncSession = Depends(get_db),
-        redis: RedisService =Depends(get_redis_service)) -> ProductService:
+        redis: RedisService | None = Depends(get_redis_service)) -> ProductService:
 
     return ProductService(db_session=db, redis=redis)
 

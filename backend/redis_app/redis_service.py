@@ -2,6 +2,7 @@ import json
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Any
+import logging
 
 from fastapi import FastAPI, Request
 import redis.asyncio as asyncredis
@@ -64,6 +65,10 @@ async def get_redis_service(request: Request) -> AsyncGenerator[RedisService | N
     pool = request.app.state.redis_pool
     client = asyncredis.Redis(connection_pool=pool)
     try:
+        await client.ping()
         yield RedisService(client)
+    except asyncredis.RedisError:
+        logging.info("Redis is not available")
+        yield None
     finally:
         await client.close()
