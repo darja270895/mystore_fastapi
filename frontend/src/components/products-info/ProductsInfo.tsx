@@ -1,6 +1,8 @@
 import loadProducts from "./load-products";
 import {useEffect, useState} from "react";
-import '../../App.css'
+import MyButton from "../ui/Button"
+import MyTable from "../ui/Table"
+import {Box} from '@mantine/core'
 
 
 interface Product {
@@ -13,44 +15,33 @@ interface Product {
 
 const ProductsInfo = () => {
     const [products, setProducts] = useState<Product[]>([]);
+    const [isLoading, setIsLoading] = useState(false)
 
     async function handleLoadProducts() {
-        const users = await loadProducts();
-        console.log(users);
-        setProducts(users);
+        setIsLoading(true)
+        try {
+            const users = await loadProducts();
+            console.log(users);
+            setProducts(users);
+        } catch (error) {
+            console.log("Error loading Products", error)
+        } finally {
+            setIsLoading(false)
+        }
     }
+
 
     useEffect(() => {
         handleLoadProducts();
     }, []);
 
     return (
-        <section className="dashboard-section">
-            <button className="button" onClick={handleLoadProducts}>
-                Refresh
-            </button>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Stock</th>
-                    <th>Price</th>
-                </tr>
-                </thead>
-                <tbody>
-                {products.map((product) => (
-                    <tr key={product.id}>
-                        <td>{product.id}</td>
-                        <td>{product.name}</td>
-                        <td>{product.stock}</td>
-                        <td>{product.price}</td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-        </section>
-    )
+        <Box className="dashboard-section">
+            <MyButton label='Refresh' onClick={handleLoadProducts} loading={isLoading}/>
+                <MyTable data={products}/>
+
+        </Box>
+)
 }
 
 export default ProductsInfo;

@@ -1,7 +1,9 @@
 import loadUsers from "./load-users";
 import {useEffect, useState} from "react";
-import '../../App.css'
-
+// import { useDisclosure } from '@mantine/hooks';
+import MyButton from "../ui/Button";
+import MyTable from "../ui/Table"
+import {Box} from '@mantine/core'
 
 interface User {
     id: number;
@@ -12,11 +14,20 @@ interface User {
 
 const UsersInfo = () => {
     const [users, setUsers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(false)
 
     async function handleLoadUsers() {
-        const users = await loadUsers();
-        console.log(users);
-        setUsers(users);
+        setIsLoading(true);
+        try {
+            const users = await loadUsers();
+            console.log(users);
+            setUsers(users);
+        } catch (error) {
+            console.error('Failed to fetch Users', error)
+        } finally {
+            setIsLoading(false)
+        }
+
     }
 
     useEffect(() => {
@@ -24,29 +35,15 @@ const UsersInfo = () => {
     }, []);
 
     return (
-        <section className="dashboard-section">
-            <button className="button" onClick={handleLoadUsers}>
-                Refresh
-            </button>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                </tr>
-                </thead>
-                <tbody>
-                {users.map((user) => (
-                    <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-        </section>
+        // Mantine Components ADD
+        <Box>
+            <MyButton
+                label='Reload'
+                onClick={handleLoadUsers}
+                loading={isLoading}
+            />
+            <MyTable data={users}/>
+        </Box>
     )
 }
 

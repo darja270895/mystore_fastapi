@@ -1,48 +1,49 @@
-import {useEffect} from "react";
 import './App.css'
 import AppMain from './components/app-main/AppMain'
+import {useState} from 'react'
+import {Modal, Button} from '@mantine/core'
+import {useDisclosure} from '@mantine/hooks';
 
-const API = "http://127.0.0.1:8000"
+// const API = "http://127.0.0.1:8000"
+
+// function WhoAmI({name, link}:
+
+interface WhoAmIProps {
+    name: { firstname: string; surname: string; };
+    link: string;
+}
+
+function WhoAmIFunct({name, link}: WhoAmIProps) {
+    const [years, setYears] = useState(27)
+    const nextYear = () => {
+        setYears(years + 1)
+    }
+    return (
+        <>
+            <button onClick={nextYear}>+++</button>
+            <div className="bio-card-top-right">
+                <h3 className="text-sm font-semibold text-gray-900">made
+                    by {name.firstname} {name.surname}, {years} y.o.</h3>
+                <a className="text-xs text-gray-500" href={link}>My linkedIn</a>
+            </div>
+        </>
+    )
+}
 
 // Component. That's a JS function that returns markup.
 function App() {
+    const [opened, {open, close}] = useDisclosure(false)
 
-    // JSX syntaxis
-    // Wrap with <div></div> or <> </>
-
-    async function loadPurchases() {
-        const response = await fetch(`${API}/get_purchases/`);
-        if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
-        }
-        const purchases = await response.json();
-        const table = document.getElementById("purchasesTable");
-        if (!table) return;
-        table.innerHTML = "";
-        purchases.forEach((purchase: any) => {
-            const row = document.createElement("tr");
-            row.innerHTML = ` 
-             <td>${purchase.id}</td> 
-             <td>${purchase.user_id}</td> 
-             <td>${purchase.product_id}</td> 
-             <td>${purchase.amount}</td> 
-             <td> ${purchase.created_at ? new Date(purchase.created_at).toLocaleString() : "—"} </td> `;
-            table.appendChild(row);
-        });
-    }
-
-    useEffect(() => {
-        // loadUsers();
-        // loadProducts();
-        loadPurchases();
-    }, []);
     return (
         <div>
+            <WhoAmIFunct name={{firstname: 'Daria', surname: 'Harashchenia'}}
+                         link="https://www.linkedin.com/in/daria-harashchenia-949081107/"/>
             <AppMain/>
-
-
-
-         </div>
+            <Modal opened={opened} onClose={close} centered></Modal>
+            <Button variant="default" onClick={open}>
+                Register
+            </Button>
+        </div>
     );
 }
 
