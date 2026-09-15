@@ -192,16 +192,14 @@ table {
 
 thead {
   background: rgba(87, 119, 133, 0.45);
+  /*text-align: center;*/
 }
 
 th {
   padding: 13px 16px;
-
+  /*text-align: center;*/
   color: #f0f5f7;
-
   font-weight: 600;
-  text-align: left;
-
   border-bottom: 1px solid rgba(200, 220, 230, 0.18);
 }
 
