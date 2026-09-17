@@ -1,6 +1,5 @@
 import loadUsers from "./load-users";
 import {useEffect, useState} from "react";
-// import { useDisclosure } from '@mantine/hooks';
 import MyButton from "../ui/Button";
 import MyTable from "../ui/Table"
 import {Box} from '@mantine/core'
@@ -36,7 +35,7 @@ const UsersInfo = () => {
 
     return (
         // Mantine Components ADD
-        <Box>
+        <Box className="dashboard-section">
             <MyButton
                 label='Reload'
                 onClick={handleLoadUsers}
