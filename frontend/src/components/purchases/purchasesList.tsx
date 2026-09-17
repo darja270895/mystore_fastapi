@@ -16,8 +16,8 @@ const PurchaseList = ({data}:{data: Purchase[]}) => {
     console.log(elements)
 
     return(
-        <Box>
-            <h3 className='dashboard-section h2'>My purchases</h3>
+        <Box className="dashboard-section">
+            <h3>My purchases</h3>
             <Table>
                 <Table.Thead>
                     <Table.Tr>
