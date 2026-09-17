@@ -1,6 +1,5 @@
 import {Button, Center, Modal, Stack, TextInput} from "@mantine/core";
 import {useState} from 'react'
-import {useDisclosure} from "@mantine/hooks";
 import {handleRefresh} from "../pageFunctionality";
 interface LoginModalProps {
     opened: boolean;
