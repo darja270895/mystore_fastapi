@@ -1,10 +1,9 @@
-import '@mantine/core/styles.css';
-import {Table} from '@mantine/core'
-
+import {Table} from '@mantine/core';
 
 interface TableProps {
     data: Record<string, unknown>[];
 }
+
 export default function MyTable({data}: TableProps) {
     if (!data.length) {
         return null;
@@ -16,22 +15,22 @@ export default function MyTable({data}: TableProps) {
             <Table>
                 <Table.Thead>
                     <Table.Tr>
-                        {columns.map((column) =>
-                        <Table.Th key={column}>{column}</Table.Th>
-                        )}
+                        {columns.map((column) => (
+                            <Table.Th key={column}>{column}</Table.Th>
+                        ))}
                     </Table.Tr>
                 </Table.Thead>
 
                 <Table.Tbody>
-                    {data.map((row, rowIndex) =>
-                    <Table.Tr key={rowIndex}>
-                        {columns.map((column) =>
-                        <Table.Td key={column}>
-                            {String(row[column] ?? '')}
-                        </Table.Td>
-                        )}
-                    </Table.Tr>
-                    )}
+                    {data.map((row, rowIndex) => (
+                        <Table.Tr key={rowIndex}>
+                            {columns.map((column) => (
+                                <Table.Td key={column}>
+                                    {String(row[column] ?? '')}
+                                </Table.Td>
+                            ))}
+                        </Table.Tr>
+                    ))}
                 </Table.Tbody>
             </Table>
         </Table.ScrollContainer>

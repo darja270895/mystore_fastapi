@@ -35,3 +35,7 @@ class ProductDbInterface:
         result = await self.session.execute(statement)
 
         return result.scalar_one_or_none() #returns clean object without tuple unpacking
+
+    async def delete(self, product: models.Product) -> None:
+        await self.session.delete(product)
+        await self.session.flush()

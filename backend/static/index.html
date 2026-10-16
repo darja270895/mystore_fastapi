@@ -8,12 +8,13 @@
 </head>
 <body>
 
-<header>🛒 Store Dashboard</header>
+<header>Store Dashboard</header>
 
 <div class="tabs">
-    <div class="tab" onclick="switchTab('users')">👤 Users1</div>
-    <div class="tab" onclick="switchTab('products')">📦 Products</div>
-    <div class="tab active" onclick="switchTab('purchases')">🧾 Purchases</div>
+    <div class="tab active" onclick="switchTab('users')">Users</div>
+    <div class="tab" onclick="switchTab('products')">Products</div>
+    <div class="tab" onclick="switchTab('card')">Card</div>
+    <div class="tab" onclick="switchTab('purchases')">Purchases</div>
 </div>
 
 <div class="content">
@@ -25,12 +26,11 @@
             <input id="userName" placeholder="Name"/>
             <input id="userEmail" placeholder="Email"/>
             <button onclick="createUser()">+ Add User</button>
-            <button class="secondary" onclick="loadUsers()">↻ Refresh</button>
+            <button class="secondary" onclick="loadUsers()">Refresh</button>
         </div>
         <div class="status" id="userStatus"></div>
         <table>
             <thead><tr><th>ID</th><th>Name</th><th>Email</th></tr></thead>
-
             <tbody id="usersTable"></tbody>
         </table>
     </div>
@@ -43,13 +43,42 @@
             <input id="productStock" placeholder="Stock" type="number"/>
             <input id="productPrice" placeholder="Price" type="number" step="0.01"/>
             <button onclick="createProduct()">+ Add Product</button>
-            <button class="secondary" onclick="loadProducts()">↻ Refresh</button>
+            <button class="secondary" onclick="loadProducts()">Refresh</button>
         </div>
         <div class="status" id="productStatus"></div>
         <table>
-            <thead><tr><th>ID</th><th>Name</th><th>Stock</th><th>Price</th></tr></thead>
+            <thead><tr><th>ID</th><th>Name</th><th>Stock</th><th>Price</th><th></th></tr></thead>
             <tbody id="productsTable"></tbody>
         </table>
+    </div>
+
+    <!-- CARD (Redis Pub/Sub) -->
+    <div class="section" id="card">
+        <h2>Card (Redis Pub/Sub)</h2>
+        <p class="hint">
+            Add publishes to <code>channel:card</code>. A background subscriber writes the Redis HASH
+            <code>card:user:{id}</code>. Checkout calls the Purchases pipeline, then clears the Card.
+        </p>
+        <div class="form-row">
+            <input id="cardUserId" placeholder="User ID" type="number"/>
+            <input id="cardProductId" placeholder="Product ID" type="number"/>
+            <input id="cardAmount" placeholder="Amount" type="number" value="1" min="1"/>
+            <button onclick="addToCard()">+ Add to Card</button>
+            <button class="secondary" onclick="loadCard()">Refresh</button>
+            <button class="secondary" onclick="clearCard()">Clear</button>
+            <button onclick="checkoutCard()">Buy Card → Purchases</button>
+        </div>
+        <div class="status" id="cardStatus"></div>
+        <table>
+            <thead><tr><th>Product ID</th><th>Name</th><th>Amount</th><th></th></tr></thead>
+            <tbody id="cardTable"></tbody>
+        </table>
+
+        <div class="sub-block">
+            <h3>Live Card events (SSE ← Pub/Sub)</h3>
+            <div class="status" id="cardLiveStatus">Disconnected</div>
+            <div id="cardLiveLog" class="live-log"></div>
+        </div>
     </div>
 
     <!-- PURCHASES -->
@@ -58,32 +87,85 @@
         <div class="form-row">
             <input id="buyUserId" placeholder="User ID" type="number"/>
             <input id="buyProductId" placeholder="Product ID" type="number"/>
-            <input id="buyAmount" placeholder="Amount" type="number" value="1"/>
+            <input id="buyAmount" placeholder="Amount" type="number" value="1" min="1"/>
             <button onclick="createPurchase()">+ Buy</button>
-            <button class="secondary" onclick="loadPurchases()">↻ Refresh</button>
+            <button class="secondary" onclick="loadPurchases()">Refresh</button>
         </div>
         <div class="status" id="purchaseStatus"></div>
         <table>
             <thead><tr><th>ID</th><th>User ID</th><th>Product ID</th><th>Amount</th><th>Date</th></tr></thead>
             <tbody id="purchasesTable"></tbody>
         </table>
+
+        <div class="sub-block">
+            <h3>Recent (Redis)</h3>
+            <div class="form-row">
+                <button class="secondary" onclick="loadRecentPurchases()">Load recent</button>
+            </div>
+            <div class="status" id="recentStatus"></div>
+            <ul id="recentList" class="plain-list"></ul>
+        </div>
+
+        <div class="sub-block">
+            <h3>Stock movements</h3>
+            <div class="form-row">
+                <button class="secondary" onclick="loadStockMovements()">Load movements</button>
+            </div>
+            <div class="status" id="movementsStatus"></div>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th><th>Product</th><th>Delta</th><th>Reason</th><th>Purchase</th><th>Date</th>
+                </tr>
+                </thead>
+                <tbody id="movementsTable"></tbody>
+            </table>
+        </div>
+
+        <div class="sub-block">
+            <h3>Notifications</h3>
+            <div class="form-row">
+                <input id="notifUserId" placeholder="User ID" type="number"/>
+                <button class="secondary" onclick="loadNotifications()">Load notifications</button>
+            </div>
+            <div class="status" id="notifStatus"></div>
+            <ul id="notifList" class="plain-list"></ul>
+        </div>
+
+        <div class="sub-block">
+            <h3>Live events (SSE)</h3>
+            <div class="status" id="liveStatus">Disconnected</div>
+            <div id="liveLog" class="live-log"></div>
+        </div>
     </div>
 
 </div>
 
 <script>
-    const API = 'http://127.0.0.1:8000';
+    let purchaseEventSource = null;
+    let cardEventSource = null;
 
     function switchTab(name) {
         document.querySelectorAll('.tab').forEach((t, i) => {
-            t.classList.toggle('active', ['users','products','purchases'][i] === name);
+            t.classList.toggle('active', ['users', 'products', 'card', 'purchases'][i] === name);
         });
         document.querySelectorAll('.section').forEach(s => {
             s.classList.toggle('active', s.id === name);
         });
+
+        stopPurchaseLiveEvents();
+        stopCardLiveEvents();
+
         if (name === 'users') loadUsers();
         if (name === 'products') loadProducts();
-        if (name === 'purchases') loadPurchases();
+        if (name === 'card') {
+            loadCard();
+            startCardLiveEvents();
+        }
+        if (name === 'purchases') {
+            loadPurchases();
+            startPurchaseLiveEvents();
+        }
     }
 
     function setStatus(id, msg, isError = false) {
@@ -92,49 +174,39 @@
         el.className = 'status' + (isError ? ' error' : '');
     }
 
-    // --- USERS ---
-    // async function loadUsers() {
-    //     const res = await fetch(`${API}/get_users/`);
-    //     const users = await res.json();
-    //     document.getElementById('usersTable').innerHTML = users.map(u =>
-    //         `<tr><td><span class="badge">${u.id}</span></td><td>${u.name}</td><td>${u.email}</td></tr>`
-    //     ).join('') || '<tr><td colspan="3">No users yet</td></tr>';
-    // }
-
-    async function loadUsers() {
-        const table = document.getElementById("usersTable");
-        const status = document.getElementById("userStatus");
-
+    async function readErrorDetail(res) {
         try {
-            status.textContent = "Loading...";
-
-            const response = await fetch("/users/");
-
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
+            const body = await res.json();
+            if (typeof body.detail === 'string') return body.detail;
+            if (Array.isArray(body.detail)) {
+                return body.detail.map(d => d.msg || JSON.stringify(d)).join('; ');
             }
+            return JSON.stringify(body);
+        } catch {
+            return `HTTP ${res.status}`;
+        }
+    }
+
+    // --- USERS ---
+    async function loadUsers() {
+        const table = document.getElementById('usersTable');
+        try {
+            setStatus('userStatus', 'Loading...');
+            const response = await fetch('/users/');
+            if (!response.ok) throw new Error(await readErrorDetail(response));
 
             const users = await response.json();
-
-            table.innerHTML = "";
-
-            users.forEach(user => {
-                const row = document.createElement("tr");
-
-                row.innerHTML = `
-                <td>${user.id}</td>
-                <td>${user.name}</td>
-                <td>${user.email}</td>
-            `;
-
-                table.appendChild(row);
-            });
-
-            status.textContent = `Loaded ${users.length} users`;
-
+            table.innerHTML = users.map(u => `
+                <tr>
+                    <td><span class="badge">${u.id}</span></td>
+                    <td>${u.name}</td>
+                    <td>${u.email}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="3">No users yet</td></tr>';
+            setStatus('userStatus', `Loaded ${users.length} users`);
         } catch (error) {
             console.error(error);
-            status.textContent = "Failed to load users";
+            setStatus('userStatus', error.message || 'Failed to load users', true);
         }
     }
 
@@ -143,63 +215,65 @@
         const email = document.getElementById('userEmail').value.trim();
         if (!name || !email) return setStatus('userStatus', 'Please fill in all fields.', true);
 
-        const res = await fetch(`${API}/users/`, {
+        const res = await fetch('/users/', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                email: email
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, email}),
         });
         if (res.ok) {
-            setStatus('userStatus', '✅ User created!');
+            setStatus('userStatus', 'User created!');
             document.getElementById('userName').value = '';
             document.getElementById('userEmail').value = '';
             await loadUsers();
         } else {
-            setStatus('userStatus', '❌ Failed to create user.', true);
+            setStatus('userStatus', await readErrorDetail(res), true);
         }
     }
 
     // --- PRODUCTS ---
     async function loadProducts() {
-        const table = document.getElementById("productsTable")
-        const status = document.getElementById("productStatus")
+        const table = document.getElementById('productsTable');
         try {
-            status.textContent = "Loading ...";
+            setStatus('productStatus', 'Loading...');
+            const response = await fetch('/products/');
+            if (!response.ok) throw new Error(await readErrorDetail(response));
 
-            const response = await fetch("/products/");
-
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
-            }
-
-            const products = await response.json(); // collection of products
-
-            console.log("PRODUCTS:", products);
-            console.log("IS ARRAY:", Array.isArray(products));
-            console.log("LENGTH:", products.length);
-
-            table.innerHTML = "";
-
-            products.forEach(product => {
-                const row = document.createElement("tr");
-
-                row.innerHTML= `
-                    <td>${product.name}</td>
-                    <td>${product.price}</td>
-                    <td>${product.stock}</td>
-                `;
-                table.appendChild(row)
-            });
-            status.textContent = `Loaded ${products.length} products`;
-
-        }
-        catch (error) {
+            const products = await response.json();
+            table.innerHTML = products.map(p => `
+                <tr>
+                    <td><span class="badge">${p.id}</span></td>
+                    <td>${p.name}</td>
+                    <td>${p.stock}</td>
+                    <td>${p.price}</td>
+                     <td>
+                    <form class="delete-form" onsubmit="deleteProduct(event, ${p.id})">
+                        <button type="submit" class="delete-btn" title="Delete">🗑️</button>
+                    </form>
+                </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5">No products yet</td></tr>';
+            setStatus('productStatus', `Loaded ${products.length} products`);
+        } catch (error) {
             console.error(error);
-            status.textContent = "Failed to load products";
+            setStatus('productStatus', error.message || 'Failed to load products', true);
+        }
+    }
+
+    async function deleteProduct(event, id) {
+        event.preventDefault();
+        if (!confirm('Delete this product?')) return;
+
+        try {
+            setStatus('productStatus', `Deleting product ${id}...`);
+            const response = await fetch(`/products/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error(await readErrorDetail(response));
+            setStatus('productStatus', `Deleted product ${id}`);
+            await loadProducts();
+        } catch (error) {
+            console.error(error);
+            setStatus('productStatus', error.message || 'Failed to delete product', true);
         }
     }
 
@@ -209,60 +283,341 @@
         const stock = document.getElementById('productStock').value.trim();
         if (!name || !price || !stock) return setStatus('productStatus', 'Please fill in all fields.', true);
 
-        const res = await fetch(`${API}/products/`, {
+        const res = await fetch('/products/', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                name: name,
-                price: price,
-                stock: stock
-            })
+                name,
+                price: Number(price),
+                stock: Number(stock),
+            }),
         });
         if (res.ok) {
-            setStatus('productStatus', '✅ Product created!');
+            setStatus('productStatus', 'Product created!');
             document.getElementById('productName').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productStock').value = '';
             await loadProducts();
         } else {
-            setStatus('productStatus', '❌ Failed to create product.', true);
+            setStatus('productStatus', await readErrorDetail(res), true);
         }
+    }
+
+    // --- CARD (Redis Pub/Sub) ---
+    function cardUserIdOrError() {
+        const userId = document.getElementById('cardUserId').value;
+        if (!userId) {
+            setStatus('cardStatus', 'Enter a User ID first.', true);
+            return null;
+        }
+        return Number(userId);
+    }
+
+    async function loadCard() {
+        const userId = cardUserIdOrError();
+        if (userId == null) return;
+        const table = document.getElementById('cardTable');
+        try {
+            setStatus('cardStatus', 'Loading card from Redis...');
+            const res = await fetch(`/card/${userId}`);
+            if (!res.ok) throw new Error(await readErrorDetail(res));
+            const card = await res.json();
+            table.innerHTML = (card.items || []).map(item => `
+                <tr>
+                    <td><span class="badge">${item.product_id}</span></td>
+                    <td>${item.product_name ?? '—'}</td>
+                    <td>${item.amount}</td>
+                    <td>
+                        <button class="secondary" onclick="removeFromCard(${item.product_id})">Remove</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="4">Card is empty</td></tr>';
+            setStatus('cardStatus', `Card has ${card.total_items} item(s)`);
+        } catch (error) {
+            console.error(error);
+            setStatus('cardStatus', error.message || 'Failed to load card', true);
+        }
+    }
+
+    async function addToCard() {
+        const user_id = document.getElementById('cardUserId').value;
+        const product_id = document.getElementById('cardProductId').value;
+        const amount = document.getElementById('cardAmount').value || 1;
+        if (!user_id || !product_id) {
+            return setStatus('cardStatus', 'Please fill in User ID and Product ID.', true);
+        }
+
+        const res = await fetch('/card/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                user_id: Number(user_id),
+                product_id: Number(product_id),
+                amount: Number(amount),
+            }),
+        });
+        if (res.ok) {
+            const body = await res.json();
+            setStatus(
+                'cardStatus',
+                `Published event ${body.event_id} on ${body.channel} — subscriber updated Redis`
+            );
+            document.getElementById('cardProductId').value = '';
+            await loadCard();
+        } else {
+            setStatus('cardStatus', await readErrorDetail(res), true);
+        }
+    }
+
+    async function removeFromCard(productId) {
+        const userId = cardUserIdOrError();
+        if (userId == null) return;
+
+        const res = await fetch('/card/remove', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId, product_id: productId}),
+        });
+        if (res.ok) {
+            setStatus('cardStatus', 'Remove event published — card updated');
+            await loadCard();
+        } else {
+            setStatus('cardStatus', await readErrorDetail(res), true);
+        }
+    }
+
+    async function clearCard() {
+        const userId = cardUserIdOrError();
+        if (userId == null) return;
+
+        const res = await fetch(`/card/clear/${userId}`, {method: 'POST'});
+        if (res.ok) {
+            setStatus('cardStatus', 'Clear event published — card emptied');
+            await loadCard();
+        } else {
+            setStatus('cardStatus', await readErrorDetail(res), true);
+        }
+    }
+
+    async function checkoutCard() {
+        const userId = cardUserIdOrError();
+        if (userId == null) return;
+
+        const res = await fetch(`/card/checkout/${userId}`, {method: 'POST'});
+        if (res.ok) {
+            const purchases = await res.json();
+            setStatus(
+                'cardStatus',
+                `Checkout created ${purchases.length} purchase(s) via Purchases service`
+            );
+            document.getElementById('buyUserId').value = userId;
+            document.getElementById('notifUserId').value = userId;
+            await loadCard();
+        } else {
+            setStatus('cardStatus', await readErrorDetail(res), true);
+        }
+    }
+
+    function appendCardLiveLog(line) {
+        const log = document.getElementById('cardLiveLog');
+        const row = document.createElement('div');
+        row.textContent = `${new Date().toLocaleTimeString()}  ${line}`;
+        log.prepend(row);
+    }
+
+    function startCardLiveEvents() {
+        if (cardEventSource) return;
+        setStatus('cardLiveStatus', 'Connecting...');
+        cardEventSource = new EventSource('/card/events/live');
+
+        cardEventSource.addEventListener('ready', (ev) => {
+            setStatus('cardLiveStatus', 'Connected — waiting for card events');
+            appendCardLiveLog(`ready ${ev.data}`);
+        });
+        cardEventSource.addEventListener('card', (ev) => {
+            appendCardLiveLog(`card ${ev.data}`);
+            const userId = document.getElementById('cardUserId').value;
+            if (userId) loadCard();
+        });
+        cardEventSource.addEventListener('ping', () => {});
+        cardEventSource.onerror = () => {
+            setStatus('cardLiveStatus', 'SSE connection error / reconnecting...', true);
+        };
+    }
+
+    function stopCardLiveEvents() {
+        if (!cardEventSource) return;
+        cardEventSource.close();
+        cardEventSource = null;
+        setStatus('cardLiveStatus', 'Disconnected');
     }
 
     // --- PURCHASES ---
     async function loadPurchases() {
-        const res = await fetch(`${API}/get_purchases/`);
-        const purchases = await res.json();
-        document.getElementById('purchasesTable').innerHTML = purchases.map(p =>
-            `<tr>
-                <td><span class="badge">${p.id}</span></td>
-                <td>${p.user_id}</td>
-                <td>${p.product_id}</td>
-                <td>${p.amount}</td>
-                <td>${p.created_at ? new Date(p.created_at).toLocaleString() : '—'}</td>
-            </tr>`
-        ).join('') || '<tr><td colspan="5">No purchases yet</td></tr>';
+        try {
+            setStatus('purchaseStatus', 'Loading...');
+            const res = await fetch('/purchases/');
+            if (!res.ok) throw new Error(await readErrorDetail(res));
+
+            const purchases = await res.json();
+            if (!Array.isArray(purchases)) {
+                throw new Error('Unexpected response from /purchases/ (expected a list)');
+            }
+            document.getElementById('purchasesTable').innerHTML = purchases.map(p => `
+                <tr>
+                    <td><span class="badge">${p.id}</span></td>
+                    <td>${p.user_id}</td>
+                    <td>${p.product_id}</td>
+                    <td>${p.amount}</td>
+                    <td>${p.created_at ? new Date(p.created_at).toLocaleString() : '—'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5">No purchases yet</td></tr>';
+            setStatus('purchaseStatus', `Loaded ${purchases.length} purchases`);
+        } catch (error) {
+            console.error(error);
+            setStatus('purchaseStatus', error.message || 'Failed to load purchases', true);
+        }
     }
 
     async function createPurchase() {
         const user_id = document.getElementById('buyUserId').value;
         const product_id = document.getElementById('buyProductId').value;
-        const amount = document.getElementById('buyAmount').value;
-        if (!user_id || !product_id) return setStatus('purchaseStatus', 'Please fill in User ID and Product ID.', true);
+        const amount = document.getElementById('buyAmount').value || 1;
+        if (!user_id || !product_id) {
+            return setStatus('purchaseStatus', 'Please fill in User ID and Product ID.', true);
+        }
 
-        const res = await fetch(`${API}/buy`, {
+        const res = await fetch('/purchases/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: +user_id, product_id: +product_id, amount: +amount })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                user_id: Number(user_id),
+                product_id: Number(product_id),
+                amount: Number(amount),
+            }),
         });
         if (res.ok) {
-            setStatus('purchaseStatus', '✅ Purchase recorded!');
+            setStatus('purchaseStatus', 'Purchase recorded!');
             await loadPurchases();
+            // keep notif user in sync for convenience
+            document.getElementById('notifUserId').value = user_id;
         } else {
-            setStatus('purchaseStatus', '❌ Failed to record purchase.', true);
+            setStatus('purchaseStatus', await readErrorDetail(res), true);
         }
+    }
+
+    async function loadRecentPurchases() {
+        const list = document.getElementById('recentList');
+        try {
+            setStatus('recentStatus', 'Loading...');
+            const res = await fetch('/purchases/recent');
+            if (!res.ok) throw new Error(await readErrorDetail(res));
+            const items = await res.json();
+            list.innerHTML = items.map(item => `
+                <li>
+                    purchase #${item.purchase_id}
+                    — user ${item.user_id}
+                    — ${item.product_name} x${item.amount}
+                    — ${item.total_price}
+                </li>
+            `).join('') || '<li>No recent purchases in Redis</li>';
+            setStatus('recentStatus', `Loaded ${items.length} recent items`);
+        } catch (error) {
+            console.error(error);
+            setStatus('recentStatus', error.message || 'Failed to load recent', true);
+        }
+    }
+
+    async function loadStockMovements() {
+        try {
+            setStatus('movementsStatus', 'Loading...');
+            const res = await fetch('/purchases/stock-movements');
+            if (!res.ok) throw new Error(await readErrorDetail(res));
+            const rows = await res.json();
+            document.getElementById('movementsTable').innerHTML = rows.map(m => `
+                <tr>
+                    <td><span class="badge">${m.id}</span></td>
+                    <td>${m.product_id}</td>
+                    <td>${m.delta}</td>
+                    <td>${m.reason}</td>
+                    <td>${m.purchase_id ?? '—'}</td>
+                    <td>${m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6">No stock movements yet</td></tr>';
+            setStatus('movementsStatus', `Loaded ${rows.length} movements`);
+        } catch (error) {
+            console.error(error);
+            setStatus('movementsStatus', error.message || 'Failed to load movements', true);
+        }
+    }
+
+    async function loadNotifications() {
+        const userId = document.getElementById('notifUserId').value
+            || document.getElementById('buyUserId').value;
+        if (!userId) {
+            return setStatus('notifStatus', 'Enter a User ID first.', true);
+        }
+        const list = document.getElementById('notifList');
+        try {
+            setStatus('notifStatus', 'Loading...');
+            const res = await fetch(`/purchases/notifications/${userId}`);
+            if (!res.ok) throw new Error(await readErrorDetail(res));
+            const rows = await res.json();
+            list.innerHTML = rows.map(n => `
+                <li>
+                    #${n.id} [${n.kind}]
+                    ${n.is_read ? 'read' : 'unread'}
+                    — ${n.created_at ? new Date(n.created_at).toLocaleString() : ''}
+                    <pre class="payload">${escapeHtml(n.payload)}</pre>
+                </li>
+            `).join('') || '<li>No notifications for this user</li>';
+            setStatus('notifStatus', `Loaded ${rows.length} notifications`);
+        } catch (error) {
+            console.error(error);
+            setStatus('notifStatus', error.message || 'Failed to load notifications', true);
+        }
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+    }
+
+    function appendLiveLog(line) {
+        const log = document.getElementById('liveLog');
+        const row = document.createElement('div');
+        row.textContent = `${new Date().toLocaleTimeString()}  ${line}`;
+        log.prepend(row);
+    }
+
+    function startPurchaseLiveEvents() {
+        if (purchaseEventSource) return;
+        setStatus('liveStatus', 'Connecting...');
+        purchaseEventSource = new EventSource('/purchases/events/live');
+
+        purchaseEventSource.addEventListener('ready', (ev) => {
+            setStatus('liveStatus', 'Connected — waiting for purchases');
+            appendLiveLog(`ready ${ev.data}`);
+        });
+        purchaseEventSource.addEventListener('purchase', (ev) => {
+            appendLiveLog(`purchase ${ev.data}`);
+            loadPurchases();
+        });
+        purchaseEventSource.addEventListener('ping', () => {
+            // keepalive — ignore in UI
+        });
+        purchaseEventSource.onerror = () => {
+            setStatus('liveStatus', 'SSE connection error / reconnecting...', true);
+        };
+    }
+
+    function stopPurchaseLiveEvents() {
+        if (!purchaseEventSource) return;
+        purchaseEventSource.close();
+        purchaseEventSource = null;
+        setStatus('liveStatus', 'Disconnected');
     }
 
     // Initial load

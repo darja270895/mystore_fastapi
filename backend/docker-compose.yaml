@@ -1,30 +1,63 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-pet
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    profiles:
+      - tools
+    depends_on:
+      redis:
+        condition: service_healthy
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fastapi_app
+    container_name: mystore_api
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
-      - sqlite_data:/app/data
-    depends_on:
-      - redis
     environment:
+      PYTHONPATH: /app
+      SQLALCHEMY_DATABASE_URL: sqlite+aiosqlite:////app/data/sql_app.db
+      SQL_ECHO: "false"
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-    command: fastapi dev main.py --host 0.0.0.0 --port 8000
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-        - "6379:6379"
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      UVICORN_WORKERS: "4"
+      CACHE_TTL_SECONDS: "3600"
+      RATE_LIMIT_BUY_PER_MINUTE: "10"
     volumes:
-        - redis_data:/data
-    command: redis-server --appendonly yes
+      - ./sql_app.db:/app/data/sql_app.db #Local sqlite
+#      - sqlite_data:/app/data # Persist SQLite across restarts
+      # Live-reload code into the package path (optional for learning)
+      - .:/app/backend
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
 volumes:
   redis_data:
-  sqlite_data:
+  redisinsight_data:

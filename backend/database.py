@@ -19,40 +19,52 @@
 #         yield db
 #     finally:
 #         db.close()
-from typing import AsyncGenerator
 
-#Async SQLite connection
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
+'''Async SQLAlchemy engine + per-request session factory.
 
+Multi-worker notes (SQLite):
+- Each uvicorn worker is a separate process sharing one .db file.
+- Use NullPool (no cross-process connection sharing).
+- Enable WAL + busy_timeout so writers wait instead of failing immediately.
+'''
 
-# SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+from collections.abc import AsyncGenerator
 
-#Async DB connection URL, + DB name specifying
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./sql_app.db" # aiosqlite - async interface for SQLite
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-# async движок
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True) #echo=True вывод в консоль сгенерированные запросы
-# engine = create_async_engine(SQLALCHEMY_DATABASE_URL) #echo=True вывод в консоль сгенерированные запросы
+from backend.config import settings
 
-# fabric method to generate asyncSession instances
-AsyncSessionLocal = async_sessionmaker(
-    autocommit=False,
-    autoflush=False, #flush - отправляет накопленные в памяти изменения но не делает commit.
-    bind=engine,
-    class_=AsyncSession,  # Explicitly tell it to generate async sessions
-    expire_on_commit=False, #атрибуты не протухают после коммита, асинхронная сессия может брать значение из памяти а не из БД
-
+engine = create_async_engine(
+    settings.SQLALCHEMY_DATABASE_URL,
+    echo=settings.SQL_ECHO,
+    poolclass=NullPool,
+    connect_args={"timeout": 30},
 )
 
-# Base = declarative_base()
 
-#формирует будущие сессии по запросу
+@event.listens_for(engine.sync_engine, "connect")
+def _sqlite_on_connect(dbapi_connection, _connection_record) -> None:
+    cursor = dbapi_connection.cursor()
+
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
+
+
+AsyncSessionLocal = async_sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Create session for every query and closes this session after query executes
-    :return:
-    """
-    async with AsyncSessionLocal() as session: #async context manager
-        yield session
+    '''One AsyncSession per request never share across concurrent tasks'''
+    async with AsyncSessionLocal() as session:
+                yield session

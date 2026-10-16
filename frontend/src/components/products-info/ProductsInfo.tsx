@@ -1,47 +1,28 @@
-import loadProducts from "./load-products";
-import {useEffect, useState} from "react";
-import MyButton from "../ui/Button"
-import MyTable from "../ui/Table"
-import {Box} from '@mantine/core'
-
-
-interface Product {
-    id: number;
-    name: string;
-    stock: string;
-    price: number;
-}
-
+import {useQuery} from '@tanstack/react-query';
+import {Box} from '@mantine/core';
+import MyButton from '../ui/Button';
+import MyTable from '../ui/Table';
+import {fetchProducts} from '../../api/products';
+import {queryKeys} from '../../api/queryKeys';
 
 const ProductsInfo = () => {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [isLoading, setIsLoading] = useState(false)
+    const productsQuery = useQuery({
+        queryKey: queryKeys.products,
+        queryFn: fetchProducts,
+    });
 
-    async function handleLoadProducts() {
-        setIsLoading(true)
-        try {
-            const users = await loadProducts();
-            console.log(users);
-            setProducts(users);
-        } catch (error) {
-            console.log("Error loading Products", error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-
-    useEffect(() => {
-        handleLoadProducts();
-    }, []);
+    const products = productsQuery.data ?? [];
 
     return (
         <Box className="dashboard-section">
-            <MyButton label='Refresh' onClick={handleLoadProducts} loading={isLoading}/>
-                <MyTable data={products}/>
-
+            <MyButton
+                label="Refresh"
+                onClick={() => void productsQuery.refetch()}
+                loading={productsQuery.isFetching}
+            />
+            <MyTable data={products as unknown as Record<string, unknown>[]} />
         </Box>
-)
-}
+    );
+};
 
 export default ProductsInfo;

@@ -10,7 +10,7 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/.newenv/Lib" />
       <excludeFolder url="file://$MODULE_DIR$/backend/.newenv/Scripts" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Python 3.12.8 virtualenv (smart-pdf-service)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

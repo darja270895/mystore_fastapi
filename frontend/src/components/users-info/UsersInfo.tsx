@@ -1,49 +1,28 @@
-import loadUsers from "./load-users";
-import {useEffect, useState} from "react";
-import MyButton from "../ui/Button";
-import MyTable from "../ui/Table"
-import {Box} from '@mantine/core'
-
-interface User {
-    id: number;
-    name: string;
-    email: string;
-}
-
+import {useQuery} from '@tanstack/react-query';
+import {Box} from '@mantine/core';
+import MyButton from '../ui/Button';
+import MyTable from '../ui/Table';
+import {fetchUsers} from '../../api/users';
+import {queryKeys} from '../../api/queryKeys';
 
 const UsersInfo = () => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [isLoading, setIsLoading] = useState(false)
+    const usersQuery = useQuery({
+        queryKey: queryKeys.users,
+        queryFn: fetchUsers,
+    });
 
-    async function handleLoadUsers() {
-        setIsLoading(true);
-        try {
-            const users = await loadUsers();
-            console.log(users);
-            setUsers(users);
-        } catch (error) {
-            console.error('Failed to fetch Users', error)
-        } finally {
-            setIsLoading(false)
-        }
-
-    }
-
-    useEffect(() => {
-        handleLoadUsers();
-    }, []);
+    const users = usersQuery.data ?? [];
 
     return (
-        // Mantine Components ADD
         <Box className="dashboard-section">
             <MyButton
-                label='Reload'
-                onClick={handleLoadUsers}
-                loading={isLoading}
+                label="Reload"
+                onClick={() => void usersQuery.refetch()}
+                loading={usersQuery.isFetching}
             />
-            <MyTable data={users}/>
+            <MyTable data={users as unknown as Record<string, unknown>[]} />
         </Box>
-    )
-}
+    );
+};
 
 export default UsersInfo;

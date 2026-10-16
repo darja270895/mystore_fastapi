@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [
         react(),
         tailwindcss()],
-    base: 'mystore_fastapi',
+    base: '/mystore_fastapi/',
 
 
 })

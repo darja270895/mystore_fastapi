@@ -25,16 +25,25 @@
 |           __init__.cpython-313.pyc
 |
 +---purchases
-|       __init__.py
+|   |   purchases_router.py
+|   |   purchase_service.py
+|   |   purchase_db_interface.py
+|   |   purchase_schemas.py
+|   |   __init__.py
+|
++---async_lab
+|   |   router.py          # AsyncIO playground endpoints
+|   |   __init__.py
 |
 +---redis_app
-|   |   redis_service.py
+|   |   redis_service.py   # pool, cache, lock, rate-limit, streams, pubsub, zset
+|   |   stream_consumer.py # background asyncio.Task consumer
+|   |   events.py          # PurchaseEvent payload
+|   |   keys.py            # Redis key helpers
 |   |   __init__.py
-|   |
-|   ---__pycache__
-|           redis_service.cpython-313.pyc
-|           __init__.cpython-313.pyc
 |
+REDIS_ASYNCIO_LEARNING.md  # study guide
+
 +---static
 |       index.html
 |       styles.css

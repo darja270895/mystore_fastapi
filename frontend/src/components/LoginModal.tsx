@@ -1,13 +1,13 @@
-import {Button, Center, Modal, Stack, TextInput} from "@mantine/core";
-import {useState} from 'react'
-import {handleRefresh} from "../pageFunctionality";
+import {Button, Center, Modal, Stack, TextInput, Title, Text} from '@mantine/core';
+import {useState, type ChangeEvent} from 'react';
+
 interface LoginModalProps {
     opened: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-export function LoginModal({opened, onClose}: LoginModalProps) {
-
+export function LoginModal({opened, onClose, onSuccess}: LoginModalProps) {
     const [formData, setFormData] = useState({
         firstname: '',
         surname: '',
@@ -15,37 +15,63 @@ export function LoginModal({opened, onClose}: LoginModalProps) {
         password: '',
     });
 
-    const handleChange = (event) => {
+    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
         const {name, value} = event.currentTarget;
-
-        setFormData(prevValue => ({
+        setFormData((prevValue) => ({
             ...prevValue,
             [name]: value,
         }));
     };
+
     const handleSubmit = () => {
-        localStorage.setItem('user', JSON.stringify(formData))
+        localStorage.setItem('user', JSON.stringify(formData));
+        onSuccess?.();
         onClose();
-        handleRefresh();
     };
 
     return (
-        <>
-            <Modal opened={opened} onClose={onClose} centered withCloseButton={false}>
-                <Stack>
-                    <h3>Hello {formData.firstname}</h3>
-                    <h1 style={{marginTop: 0}}>Registration form</h1>
+        <Modal opened={opened} onClose={onClose} centered withCloseButton={false}>
+            <Stack>
+                {formData.firstname ? (
+                    <Text>Hello {formData.firstname}</Text>
+                ) : null}
+                <Title order={2} mt={0}>Registration form</Title>
 
-                    <TextInput label="First name" name='firstname' placeholder="Enter your name"
-                               onChange={handleChange}/>
-                    <TextInput label="Surname" name='surname' placeholder="Enter your surname" onChange={handleChange}/>
-                    <TextInput label="Email" name='email' placeholder="Enter email" onChange={handleChange}/>
-                    <TextInput label="Password" name='password' placeholder="Password" onChange={handleChange}/>
-                    <Center mt="md">
-                        <Button onClick={handleSubmit}>Save</Button>
-                    </Center>
-                </Stack>
-            </Modal>
-        </>
-    )
+                <TextInput
+                    label="First name"
+                    name="firstname"
+                    placeholder="Enter your name"
+                    onChange={handleChange}
+                />
+                <TextInput
+                    label="Surname"
+                    name="surname"
+                    placeholder="Enter your surname"
+                    onChange={handleChange}
+                />
+                <TextInput
+                    label="Email"
+                    name="email"
+                    placeholder="Enter email"
+                    onChange={handleChange}
+                />
+                <TextInput
+                    label="Password"
+                    name="password"
+                    type="password"
+                    placeholder="Password"
+                    onChange={handleChange}
+                />
+                <Center mt="md">
+                    <Button
+                        variant="gradient"
+                        gradient={{from: 'indigo', to: 'cyan'}}
+                        onClick={handleSubmit}
+                    >
+                        Save
+                    </Button>
+                </Center>
+            </Stack>
+        </Modal>
+    );
 }

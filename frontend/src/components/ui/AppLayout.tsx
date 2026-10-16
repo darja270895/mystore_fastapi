@@ -1,32 +1,29 @@
-import { Box } from '@mantine/core';
-
-// Main Theme for the whole App
+import {Box} from '@mantine/core';
+import backgroundImg from '../../assets/background_img.jpg';
 
 interface AppLayoutProps {
     children: React.ReactNode;
-}
+} //read about React.ReactNode
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({children}: AppLayoutProps) {
     return (
         <Box
             style={{
-        minHeight: '100vh',
-            padding: '32px 48px 60px',
-
-            background: `
+                minHeight: '100vh',
+                padding: '32px 48px 60px',
+                background: `
           linear-gradient(
             rgba(30, 52, 66, 0.72),
             rgba(30, 52, 66, 0.82)
           ),
-          url('/src/assets/background_img.jpg')
+          url(${backgroundImg})
         `,
-
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundAttachment: 'fixed',
-    }}
->
-    {children}
-    </Box>
-);
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+            }}
+        >
+            {children}
+        </Box>
+    );
 }

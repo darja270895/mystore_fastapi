@@ -1,11 +1,8 @@
-import UsersInfo from "../users-info/UsersInfo";
-import ProductsInfo from "../products-info/ProductsInfo";
-import PurchaseList from "../purchases/purchasesList";
-import {mockPurchases} from "../purchases/purchases.mock";
 import {useDisclosure} from "@mantine/hooks";
 import {useState} from 'react'
 import {MainPage} from '../MainPage'
 import {LoginModal} from "../LoginModal";
+import {AdminPanelPage} from "../admin-panel/AdminPanelPage";
 
 
 const AppMain = () => {
@@ -19,21 +16,26 @@ const AppMain = () => {
         localStorage.removeItem('user');
         setIsLoggedIn(false);
     };
+
+    const handleLoginSuccess = () => {
+        setIsLoggedIn(true);
+        hideModal();
+    };
+
     return (
         <>
             <MainPage onOpen={showModal} isLoggedIn={isLoggedIn}
                       onLogout={handleLogout}/>
-            {isLoggedIn && (
+            {/* {isLoggedIn && (
                 <>
                     <UsersInfo/>
                     <ProductsInfo/>
                     <PurchaseList data={mockPurchases}/>
                 </>
-            )}
+            )} */}
+            {isLoggedIn && <AdminPanelPage/>}
 
-            <LoginModal opened={opened} onClose={hideModal}/>
-
-
+            <LoginModal opened={opened} onClose={hideModal} onSuccess={handleLoginSuccess}/>
         </>
     )
 }

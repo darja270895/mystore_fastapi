@@ -134,43 +134,6 @@ body {
    BUTTONS
    ========================= */
 
-button {
-  position: absolute;
-  right: 30px;           /* Snaps the button exactly to the left border */
-  padding: 10px 16px;
-
-  color: #edf5f8;
-  background: #527f95;
-
-  border: 1px solid #6f9bae;
-  border-radius: 7px;
-
-  cursor: pointer;
-
-  font-size: 15px;
-  font-weight: 500;
-
-  transition:
-          background 0.2s,
-          transform 0.1s;
-}
-
-button:hover {
-  background: #6493aa;
-}
-
-button:active {
-  transform: translateY(1px);
-}
-
-button.secondary {
-  background: rgba(73, 102, 116, 0.75);
-  border-color: rgba(180, 205, 215, 0.25);
-}
-
-button.secondary:hover {
-  background: rgba(94, 128, 143, 0.9);
-}
 
 
 /* =========================
