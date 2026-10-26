@@ -20,6 +20,8 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.card.card_router import router as card_router
 from backend.config import settings
+from backend.k8s.k8s_middleware import K8sPodIdentityMiddleware
+from backend.k8s.k8s_router import router as k8s_router
 from backend.products.products_router import router as product_router
 from backend.purchases.purchases_router import router as purchase_router
 from backend.redis_app.redis_lifespan import redis_lifespan
@@ -29,25 +31,30 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def main_lifespan(app: FastAPI):
+    app.state.k8s_started = False
     async with AsyncExitStack() as stack:
         if settings.USE_REDIS:
             await stack.enter_async_context(redis_lifespan(app))
             logger.info('Redis connection enabled ... ')
-            
+        #!!! Rewrite, enable async connection lifespan for Kuber
+        app.state.k8s_started = True 
         yield
+        app.state.k8s_started = False
         logger.info('Exiting ... ')
 
 app = FastAPI(
     title="MyStore FastAPI",
-    description="Learning lab for Redis + AsyncIO on Python 3.13",
+    description="Learning lab for Redis + AsyncIO + Kubernetes on Python 3.12+",
     lifespan = main_lifespan,
 )
+app.add_middleware(K8sPodIdentityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    max_age=600, # Caches the permission for the browser for not to ask Permissions every time
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -59,6 +66,7 @@ app.include_router(user_router)
 app.include_router(product_router)
 app.include_router(card_router)
 app.include_router(purchase_router)
+app.include_router(k8s_router)
 
 
 

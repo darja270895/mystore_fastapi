@@ -10,9 +10,13 @@ Lifespan is safe for multi-worker uvicorn:
 from __future__ import annotations
 
 import json
-from typing import Any
+import logging
+from contextlib import asynccontextmanager
+from typing import Any, Callable, AsyncIterator
 
 import redis.asyncio as asyncredis
+from redis.asyncio.client import Pipeline
+
 from backend.config import settings
 
 # Atomic operations - redis Distributed locking
@@ -86,7 +90,7 @@ class RedisLockService(BaseRedis):
 
     async def refresh_lock(self, key: str, token: str, ttl_ms: int | None = None) -> bool:
         """Extend lock TTL only if we still own the token (XX + value check via Lua GET)."""
-        
+
         ttl = settings.STOCK_LOCK_TTL_MS if ttl_ms is None else ttl_ms
         # Thread-save operation
         result = await self.redis_client.eval(
@@ -95,7 +99,7 @@ class RedisLockService(BaseRedis):
             key,
             token,
             ttl,
-            )
+        )
 
         return bool(result)
 
@@ -106,15 +110,7 @@ class RedisLockService(BaseRedis):
 
 class RedisRateLimiter(BaseRedis):
     """fixed window counter in Redis (shared across workers).
-    
-    Usage example:
-
-    allowed, count = await limiter.check_rate_limit(key=f"rl:user:{user_id}:login",
-        limit=5,
-        window_seconds=60,)
-        
-    if not allowed:
-        raise HTTPException(429, f"Rate limit exceeded ({count}/5)")    
+    Main goal is to limit parallel requests to DB so there wouldn't be a Db overloading.
     """
 
     async def check_rate_limit(
@@ -123,12 +119,10 @@ class RedisRateLimiter(BaseRedis):
             limit: int,
             window_seconds: int = 60,
     ) -> tuple[bool, int]:
-    
-        count = int(
-        await _IMPLEMENT_FIXED_WINDOW_LUA(
-            keys=[key],
-            args=[window_seconds],
-        ))
+
+        # registering Script - returns callable Script object
+        script = self.redis_client.register_script(_IMPLEMENT_FIXED_WINDOW_LUA)
+        count = int(await script(keys=[key], args=[window_seconds]))
         return count <= limit, count
 
 
@@ -161,7 +155,7 @@ class RedisPublishService(BaseRedis):
         return int(await self.redis_client.publish(channel, message))
 
 
-class RedisZSetService(BaseRedis): 
+class RedisZSetService(BaseRedis):
     """Recent activity - recent purchases feed. Sorted sets."""
 
     async def zadd_scored(self, key: str, member: str, score: float) -> int:
@@ -194,3 +188,64 @@ class RedisHashService(BaseRedis):
     async def hset(self, key: str, field: str, value: str) -> int:
         """Card events, overwriting the valuy by key"""
         return int(await self.redis_client.hset(key, field, value))
+
+
+class RedisPipelineService(BaseRedis):
+
+    @asynccontextmanager
+    async def pipeline(self, transaction: bool=True) -> AsyncIterator[Pipeline]:
+        """ Manages pipeline Resource's lifecycle and resets its state in exit"""
+        async with self.redis_client.pipeline(transaction=transaction) as pipe:
+            try:
+                yield pipe
+            except Exception:
+                logging.exception("Error building Redis pipeline")
+                raise
+
+
+    async def set_pack(self, data: dict) -> bool:
+        async with self.pipeline(transaction=False) as pipeline:
+            for key, value in data.items():
+                # buffering commands
+                pipeline.set(name=f"seat: {key}", value=value) #queue command
+            results = await pipeline.execute()
+            return all(results)
+
+    async def get_chain(self, keys) -> dict[str, Any]:
+
+        async with self.pipeline(transaction=False) as pipeline:
+            for key in keys:
+                pipeline.get(key) #queue command
+            values = await pipeline.execute()
+            return dict(zip(keys, values))
+
+    async def universal_pipeline_execute(self, commands: list[tuple], transaction=True):
+        """
+        Usage example:
+        universal_pipeline([("set", "a", 1), ("get", "b"), ("incr", "c")])
+        :param transaction: True or False (depends on whether we want MULTI\EXEC (set to True) or not)
+        :param commands: list of commands
+
+        """
+        async with self.pipeline(transaction=transaction) as pipeline:
+            for name, *args in commands:
+                getattr(pipeline, name)(*args)
+            return await pipeline.execute()
+
+    # async def execute(
+    #         self,
+    #         queue: Callable[[Pipeline], None],
+    #         *,
+    #         transaction: bool = True,
+    # ) -> list[Any]:
+    #     """Run the commands queued by `queue` in a single round trip.
+    #     The caller owns keys/payloads; this method owns the connection
+    #     lifecycle. transaction=True wraps the batch in MULTI/EXEC (atomic),
+    #     transaction=False only batches the network I/O.
+    #     Results come back in queue order; the first failing command raises.
+    #     """
+    #     async with self.redis_client.pipeline(transaction=transaction) as pipe:
+    #         queue(pipe)  # buffering only - nothing is sent yet
+    #         return await pipe.execute()
+
+

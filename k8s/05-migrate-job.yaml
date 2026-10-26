@@ -1,0 +1,34 @@
+# Runs "alembic upgrade head" once against the shared SQLite volume.
+# Jobs are immutable: to re-run after a new migration, delete it first
+# (k8s/deploy.ps1 does this) or wait for ttlSecondsAfterFinished to remove it.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mystore-db-migrate
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: mystore-db-migrate
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: alembic
+          image: mystore-api:local
+          imagePullPolicy: IfNotPresent
+          workingDir: /app/backend
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: mystore-config
+            - secretRef:
+                name: mystore-secret
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /app/data
+      volumes:
+        - name: sqlite-data
+          persistentVolumeClaim:
+            claimName: sqlite-data

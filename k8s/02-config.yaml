@@ -1,0 +1,30 @@
+# Non-secret settings, read by backend/config.py (pydantic-settings reads env vars).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mystore-config
+data:
+  PYTHONPATH: "/app"
+  # Scale with pods, not uvicorn workers: 3 pods x 1 worker = 3 processes.
+  UVICORN_WORKERS: "1"
+  RUN_MIGRATIONS: "false"
+  SQL_ECHO: "false"
+  USE_REDIS: "true"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  CACHE_TTL_SECONDS: "3600"
+  RATE_LIMIT_BUY_PER_MINUTE: "10"
+  K8S_DEPLOYMENT_NAME: "mystore-api"
+  K8S_LEASE_NAME: "mystore-stream-consumer-lease"
+  K8S_LEASE_DURATION_SECONDS: "30"
+  K8S_JOB_IMAGE: "mystore-api:local"
+---
+# Values that would be credentials in a real deployment (e.g. a Postgres URL with a password).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mystore-secret
+type: Opaque
+stringData:
+  SQLALCHEMY_DATABASE_URL: "sqlite+aiosqlite:////app/data/sql_app.db"

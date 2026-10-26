@@ -42,6 +42,24 @@ class Settings(BaseSettings):
     CONSUMER_LEADER_LOCK_KEY: str = "lock:purchase-stream-consumer"
     CONSUMER_LEADER_LOCK_TTL_MS: int = 30_000
 
+    # Kubernetes Downward API & Cluster integration settings
+    K8S_ENABLED: bool = True
+    POD_NAME: str = "local-dev-pod"
+    POD_NAMESPACE: str = "mystore"
+    POD_IP: str = "127.0.0.1"
+    NODE_NAME: str = "docker-desktop"
+    K8S_SERVICE_ACCOUNT: str = "mystore-api-sa"
+    K8S_DEPLOYMENT_NAME: str = "mystore-api"
+    K8S_API_SERVER: str = ""
+    K8S_BEARER_TOKEN: str = ""
+    K8S_CA_CERT_PATH: str = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    K8S_TOKEN_PATH: str = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    K8S_NAMESPACE_PATH: str = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+    K8S_API_TIMEOUT_SECONDS: float = 5.0
+    K8S_LEASE_NAME: str = "mystore-stream-consumer-lease"
+    K8S_LEASE_DURATION_SECONDS: int = 30
+    K8S_JOB_IMAGE: str = "mystore-api:local"
+
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE,
         env_file_encoding="utf-8",

@@ -1,0 +1,13 @@
+# One SQLite file shared by the migration Job and all 3 backend pods.
+# ReadWriteOnce means "one node", not "one pod": on a single-node local cluster
+# (Docker Desktop, kind, minikube) every pod lands on that node and can mount it.
+# On a multi-node cluster, switch the app to Postgres instead.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sqlite-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

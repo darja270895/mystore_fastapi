@@ -1,0 +1,12 @@
+Redis Cache — продукты.
+Redis Hash / Sets — корзина.
+Pipeline — операции с корзиной и batch-операции.
+Pub/Sub — события магазина.
+WebSocket + Pub/Sub — realtime обновления.
+Streams — надежные события, где Pub/Sub уже недостаточно.
+Sorted Sets — популярные товары / рейтинг.
+TTL — временные данные.
+Distributed Lock — защита от race condition.
+Rate Limiting — ограничение API.
+Counters — просмотры/покупки.
+Lua scripts — атомарные сложные операции.
