@@ -19,6 +19,8 @@ data:
   K8S_LEASE_NAME: "mystore-stream-consumer-lease"
   K8S_LEASE_DURATION_SECONDS: "30"
   K8S_JOB_IMAGE: "mystore-api:local"
+  # Login microservice Service (09-login-service.yaml), read by backend/auth_client.py
+  LOGIN_SERVICE_URL: "http://mystore-login:8001"
 ---
 # Values that would be credentials in a real deployment (e.g. a Postgres URL with a password).
 apiVersion: v1

@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     K8S_LEASE_DURATION_SECONDS: int = 30
     K8S_JOB_IMAGE: str = "mystore-api:local"
 
+    # Separate login microservice (uvicorn on its own port)
+    LOGIN_SERVICE_URL: str = "http://127.0.0.1:8001"
+
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE,
         env_file_encoding="utf-8",

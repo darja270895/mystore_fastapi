@@ -185,3 +185,70 @@ async def api_client_without_redis(session_factory, monkeypatch):
                 yield client
     finally:
         app.dependency_overrides.clear()
+
+
+# --------------------------------------------------------------------------- #
+# Login microservice (own database, own app — independent of the main app above)
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+async def login_engine(tmp_path):
+    from backend.login_service.login_models import LoginBase
+
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{tmp_path / 'login_test.db'}",
+        poolclass=NullPool,
+        connect_args={"timeout": 30},
+    )
+    async with engine.begin() as connection:
+        await connection.run_sync(LoginBase.metadata.create_all)
+
+    yield engine
+
+    await engine.dispose()
+
+
+@pytest.fixture
+async def login_session_factory(login_engine):
+    return async_sessionmaker(
+        bind=login_engine,
+        class_=AsyncSession,
+        autocommit=False,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+
+@pytest.fixture
+async def login_session(login_session_factory) -> AsyncGenerator[AsyncSession, None]:
+    async with login_session_factory() as session:
+        yield session
+
+
+@pytest.fixture
+async def login_client(login_engine, login_session_factory, monkeypatch):
+    """ASGI client running the real login app (lifespan included) on a throwaway database."""
+    import backend.login_service.login_main as login_main
+    from backend.login_service.login_database import get_login_db
+    from backend.login_service.login_dependencies import get_password_hasher
+    from backend.login_service.login_adapters import ScryptPasswordHasher
+
+    # Lifespan must create/dispose the throwaway engine, never the real login.db.
+    monkeypatch.setattr(login_main, "login_engine", login_engine)
+
+    async def _get_test_db():
+        async with login_session_factory() as session:
+            yield session
+
+    app = login_main.app
+    app.dependency_overrides[get_login_db] = _get_test_db
+    # Cheap scrypt cost keeps the e2e suite fast; the algorithm itself is unchanged.
+    app.dependency_overrides[get_password_hasher] = lambda: ScryptPasswordHasher(n=2**4)
+    try:
+        async with app.router.lifespan_context(app):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://testserver",
+            ) as client:
+                yield client
+    finally:
+        app.dependency_overrides.clear()
